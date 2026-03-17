@@ -21,12 +21,10 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
 
-app.use(authMiddleware);
-
 app.use('/api/auth', authRoutes);
-app.use('/api/weight', weightRoutes);
-app.use('/api/lifts', liftsRoutes);
-app.use('/api/workouts', workoutsRoutes);
+app.use('/api/weight', authMiddleware, weightRoutes);
+app.use('/api/lifts', authMiddleware, liftsRoutes);
+app.use('/api/workouts', authMiddleware, workoutsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, authEnabled: isAuthEnabled() });
