@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const API = '/api';
-const VOLUME_PRESETS = ['1x5', '3x3', '5x5', '3x8', '4x6', '2x10'];
+const VOLUME_PRESETS = ['1x5', '2x5', '3x3', '3x5', '3x8'];
 
 export default function CurrentLifts() {
   const [lifts, setLifts] = useState([]);

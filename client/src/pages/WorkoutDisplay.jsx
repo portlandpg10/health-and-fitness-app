@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useFullscreen } from '../hooks/useFullscreen';
 
 const API = '/api';
 
@@ -21,6 +22,7 @@ export default function WorkoutDisplay({ tv }) {
   const [fontSize, setFontSize] = useState(24);
   const leftPanelRef = useRef(null);
   const rightPanelRef = useRef(null);
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   // Reset font size whenever the displayed day changes
   useEffect(() => { setFontSize(24); }, [dayIndex]);
@@ -126,7 +128,7 @@ export default function WorkoutDisplay({ tv }) {
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col p-4 overflow-hidden">
 
-        {/* Compact top bar: back arrow, title, and day nav all on one line */}
+        {/* Compact top bar: back arrow, title, day nav, and fullscreen */}
         <div className="flex items-center justify-between mb-3 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button
@@ -137,27 +139,36 @@ export default function WorkoutDisplay({ tv }) {
             </button>
             <h1 className="text-2xl font-bold">{dayFromDate(day?.date)} — {day?.date}</h1>
           </div>
-          {days.length > 1 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setDayIndex(Math.max(0, dayIndex - 1))}
-                disabled={dayIndex === 0}
-                className="px-4 py-2 bg-slate-700 rounded-lg text-base disabled:opacity-30"
-              >
-                ← Prev
-              </button>
-              <span className="px-3 py-2 text-slate-400 text-base self-center">
-                {dayIndex + 1} / {days.length}
-              </span>
-              <button
-                onClick={() => setDayIndex(Math.min(days.length - 1, dayIndex + 1))}
-                disabled={dayIndex === days.length - 1}
-                className="px-4 py-2 bg-slate-700 rounded-lg text-base disabled:opacity-30"
-              >
-                Next →
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {days.length > 1 && (
+              <>
+                <button
+                  onClick={() => setDayIndex(Math.max(0, dayIndex - 1))}
+                  disabled={dayIndex === 0}
+                  className="px-4 py-2 bg-slate-700 rounded-lg text-base disabled:opacity-30"
+                >
+                  ← Prev
+                </button>
+                <span className="px-3 py-2 text-slate-400 text-base self-center">
+                  {dayIndex + 1} / {days.length}
+                </span>
+                <button
+                  onClick={() => setDayIndex(Math.min(days.length - 1, dayIndex + 1))}
+                  disabled={dayIndex === days.length - 1}
+                  className="px-4 py-2 bg-slate-700 rounded-lg text-base disabled:opacity-30"
+                >
+                  Next →
+                </button>
+              </>
+            )}
+            <button
+              onClick={toggleFullscreen}
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-base text-slate-300 transition-colors"
+              title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            </button>
+          </div>
         </div>
 
         {/* Two-panel layout — min-h-0 is critical to allow flex children to shrink */}
