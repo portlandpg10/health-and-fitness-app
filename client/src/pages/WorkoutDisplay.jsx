@@ -44,7 +44,7 @@ export default function WorkoutDisplay({ tv }) {
   const handleComplete = async () => {
     const day = workout?.workouts?.[dayIndex];
     if (!day) return;
-    await fetch(`${API}/workouts/completed`, {
+    const res = await fetch(`${API}/workouts/completed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -54,7 +54,23 @@ export default function WorkoutDisplay({ tv }) {
         exercises_completed: [],
       }),
     });
-    setCompleted(true);
+    if (!res.ok) return;
+
+    const remainingWorkouts = workout.workouts.filter((_, i) => i !== dayIndex);
+    if (remainingWorkouts.length === 0) {
+      await fetch(`${API}/workouts/templates/${workout.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } else {
+      await fetch(`${API}/workouts/templates/${workout.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ workouts: remainingWorkouts }),
+      });
+    }
+    navigate('/workouts');
   };
 
   if (!workout) return <div className="p-8">Loading...</div>;

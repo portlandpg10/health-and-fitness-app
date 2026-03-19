@@ -10,7 +10,7 @@ export default function WorkoutHistory() {
     fetch(`${API}/workouts/completed`).then(r => r.json()).then(setCompleted);
   }, []);
 
-  const formatDate = (d) => new Date(d).toLocaleDateString();
+  const formatDate = (d) => new Date(d.replace(' ', 'T') + 'Z').toLocaleDateString();
 
   return (
     <div className="space-y-6">

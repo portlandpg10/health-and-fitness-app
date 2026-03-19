@@ -31,7 +31,7 @@ export default function WorkoutHistoryDetail() {
       <Link to="/history" className="text-slate-600 hover:underline">← Back to History</Link>
       <div className="bg-white rounded-xl shadow p-6">
         <h1 className="text-xl font-bold mb-1 text-slate-800">
-          {new Date(workout.completed_at).toLocaleDateString()}
+          {new Date(workout.completed_at.replace(' ', 'T') + 'Z').toLocaleDateString()}
         </h1>
         {day?.date && <p className="text-slate-500 text-sm mb-4">{dayFromDate(day.date)}</p>}
         {workout.notes && <p className="text-slate-600 mb-4">{workout.notes}</p>}

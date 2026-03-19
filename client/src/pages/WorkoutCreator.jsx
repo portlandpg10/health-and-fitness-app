@@ -19,7 +19,6 @@ export default function WorkoutCreator() {
   const [editingDay, setEditingDay] = useState(null); // { templateId, dayIndex, workouts }
   const [numWorkouts, setNumWorkouts] = useState(3);
   const [generating, setGenerating] = useState(false);
-  const [completedIds, setCompletedIds] = useState(new Set());
 
   const fetchTemplates = () => {
     fetch(`${API}/workouts/templates`, { credentials: 'include' })
@@ -148,7 +147,7 @@ export default function WorkoutCreator() {
 
   const markComplete = async (t, dayIndex) => {
     const day = t.workouts?.[dayIndex];
-    await fetch(`${API}/workouts/completed`, {
+    const res = await fetch(`${API}/workouts/completed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -158,7 +157,8 @@ export default function WorkoutCreator() {
         exercises_completed: [],
       }),
     });
-    setCompletedIds(prev => new Set([...prev, `${t.id}-${dayIndex}`]));
+    if (!res.ok) return;
+    await deleteDay(t, dayIndex);
   };
 
   return (
@@ -297,17 +297,13 @@ export default function WorkoutCreator() {
                       <Link to={`/workout/${t.id}/display?day=${i}`} className="text-sm text-slate-600 hover:underline">
                         View on TV
                       </Link>
-                      {completedIds.has(`${t.id}-${i}`) ? (
-                        <span className="text-sm text-green-600">Done!</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => markComplete(t, i)}
-                          className="text-sm text-slate-600 hover:underline"
-                        >
-                          Mark Complete
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => markComplete(t, i)}
+                        className="text-sm text-slate-600 hover:underline"
+                      >
+                        Mark Complete
+                      </button>
                       <button
                         type="button"
                         onClick={() => deleteDay(t, i)}
