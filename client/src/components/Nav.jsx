@@ -9,7 +9,7 @@ export default function Nav() {
 
   return (
     <nav className="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center gap-2">
-      <NavLink to="/weight" className={linkClass}>Weight</NavLink>
+      <NavLink to="/weight" className={linkClass}>Body Tracker</NavLink>
       <NavLink to="/workouts" className={linkClass}>Workouts</NavLink>
       <NavLink to="/lifts" className={linkClass}>Lifts</NavLink>
       <NavLink to="/history" className={linkClass}>History</NavLink>

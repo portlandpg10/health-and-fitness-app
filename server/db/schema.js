@@ -57,3 +57,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_daily_entries_date ON daily_entries(date);
   CREATE INDEX IF NOT EXISTS idx_completed_workouts_completed_at ON completed_workouts(completed_at);
 `);
+
+// Migrate: add measurements column if missing
+const cols = db.pragma('table_info(daily_entries)').map(c => c.name);
+if (!cols.includes('measurements')) {
+  db.exec('ALTER TABLE daily_entries ADD COLUMN measurements REAL');
+}

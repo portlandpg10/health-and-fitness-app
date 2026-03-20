@@ -29,6 +29,9 @@ export default function WeightTracker() {
     steps: 10,
     bad_calories: 0,
     weight: '',
+    waist: '',
+    leftThigh: '',
+    rightThigh: '',
   });
 
   useEffect(() => {
@@ -43,6 +46,13 @@ export default function WeightTracker() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const waist = parseFloat(form.waist) || 0;
+    const leftThigh = parseFloat(form.leftThigh) || 0;
+    const rightThigh = parseFloat(form.rightThigh) || 0;
+    const measurementsSum = (waist || leftThigh || rightThigh)
+      ? waist + leftThigh + rightThigh
+      : null;
+
     await fetch(`${API}/weight`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,11 +61,12 @@ export default function WeightTracker() {
         steps: form.steps * 1000,
         bad_calories: form.bad_calories * 100,
         weight: form.weight ? parseFloat(form.weight) : null,
+        measurements: measurementsSum,
       }),
     });
     const updated = await fetch(`${API}/weight`).then(r => r.json());
     setEntries(updated);
-    setForm(f => ({ ...f, weight: '' }));
+    setForm(f => ({ ...f, weight: '', waist: '', leftThigh: '', rightThigh: '' }));
   };
 
   const stepsOptions = Array.from({ length: 51 }, (_, i) => i);
@@ -63,8 +74,7 @@ export default function WeightTracker() {
 
   const chartData = entries.slice().reverse().map(e => ({
     date: e.date,
-    steps: e.steps / 1000,
-    bad_calories: e.bad_calories / 100,
+    net_burn: (e.steps / 1000) - (e.bad_calories / 100),
     weight: e.weight,
   }));
 
@@ -119,6 +129,44 @@ export default function WeightTracker() {
             className="w-full px-4 py-3 border border-slate-300 rounded-lg"
           />
         </div>
+        <div>
+          <label className="block text-sm text-slate-600 mb-1">Measurements (in)</label>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <input
+                type="number"
+                step="0.1"
+                value={form.waist}
+                onChange={e => setForm(f => ({ ...f, waist: e.target.value }))}
+                placeholder="Waist"
+                className="w-full px-3 py-3 border border-slate-300 rounded-lg text-center"
+              />
+              <p className="text-xs text-slate-400 text-center mt-1">Waist</p>
+            </div>
+            <div>
+              <input
+                type="number"
+                step="0.1"
+                value={form.leftThigh}
+                onChange={e => setForm(f => ({ ...f, leftThigh: e.target.value }))}
+                placeholder="L Thigh"
+                className="w-full px-3 py-3 border border-slate-300 rounded-lg text-center"
+              />
+              <p className="text-xs text-slate-400 text-center mt-1">Left Thigh</p>
+            </div>
+            <div>
+              <input
+                type="number"
+                step="0.1"
+                value={form.rightThigh}
+                onChange={e => setForm(f => ({ ...f, rightThigh: e.target.value }))}
+                placeholder="R Thigh"
+                className="w-full px-3 py-3 border border-slate-300 rounded-lg text-center"
+              />
+              <p className="text-xs text-slate-400 text-center mt-1">Right Thigh</p>
+            </div>
+          </div>
+        </div>
         <button type="submit" className="w-full py-3 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-700">
           Save
         </button>
@@ -135,6 +183,7 @@ export default function WeightTracker() {
                 <th className="text-right px-4 py-2 text-slate-500 font-medium">Steps</th>
                 <th className="text-right px-4 py-2 text-slate-500 font-medium">Bad Cal</th>
                 <th className="text-right px-4 py-2 text-slate-500 font-medium">Weight</th>
+                <th className="text-right px-4 py-2 text-slate-500 font-medium">Meas.</th>
               </tr>
             </thead>
             <tbody>
@@ -144,6 +193,7 @@ export default function WeightTracker() {
                   <td className="px-4 py-3 text-right">{(e.steps / 1000).toFixed(0)}k</td>
                   <td className="px-4 py-3 text-right">{e.bad_calories / 100}</td>
                   <td className="px-4 py-3 text-right">{e.weight ?? '—'}</td>
+                  <td className="px-4 py-3 text-right">{e.measurements ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -163,6 +213,7 @@ export default function WeightTracker() {
                     <th className="text-right p-3">Steps</th>
                     <th className="text-right p-3">Bad Cal</th>
                     <th className="text-right p-3">Weight</th>
+                    <th className="text-right p-3">Measurements</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,6 +223,7 @@ export default function WeightTracker() {
                       <td className="p-3 text-right">{(e.steps / 1000).toFixed(0)}k</td>
                       <td className="p-3 text-right">{e.bad_calories}</td>
                       <td className="p-3 text-right">{e.weight ?? '—'}</td>
+                      <td className="p-3 text-right">{e.measurements ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -191,9 +243,8 @@ export default function WeightTracker() {
                     <YAxis yAxisId="right" orientation="right" />
                     <Tooltip />
                     <Legend />
-                    <Line yAxisId="left" type="monotone" dataKey="steps" stroke="#3b82f6" name="Steps (k)" />
-                    <Line yAxisId="left" type="monotone" dataKey="bad_calories" stroke="#f59e0b" name="Bad Cal (100)" />
-                    <Line yAxisId="right" type="monotone" dataKey="weight" stroke="#10b981" name="Weight (lbs)" />
+                    <Line yAxisId="left" type="monotone" dataKey="net_burn" stroke="#3b82f6" name="Net Burn" dot={false} />
+                    <Line yAxisId="right" type="monotone" dataKey="weight" stroke="#10b981" name="Weight (lbs)" dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

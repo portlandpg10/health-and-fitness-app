@@ -57,14 +57,14 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { date, steps, bad_calories, weight } = req.body;
+  const { date, steps, bad_calories, weight, measurements } = req.body;
   if (!date) return res.status(400).json({ error: 'Date required' });
   const stmt = db.prepare(`
-    INSERT INTO daily_entries (date, steps, bad_calories, weight)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(date) DO UPDATE SET steps=excluded.steps, bad_calories=excluded.bad_calories, weight=excluded.weight
+    INSERT INTO daily_entries (date, steps, bad_calories, weight, measurements)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(date) DO UPDATE SET steps=excluded.steps, bad_calories=excluded.bad_calories, weight=excluded.weight, measurements=excluded.measurements
   `);
-  stmt.run(date, steps ?? 0, bad_calories ?? 0, weight ?? null);
+  stmt.run(date, steps ?? 0, bad_calories ?? 0, weight ?? null, measurements ?? null);
   res.json({ success: true });
 });
 
