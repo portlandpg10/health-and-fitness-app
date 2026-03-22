@@ -56,9 +56,15 @@ router.put('/templates/:id', (req, res) => {
 });
 
 router.delete('/templates/:id', (req, res) => {
-  const result = db.prepare('DELETE FROM workout_templates WHERE id=?').run(req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: 'Not found' });
-  res.json({ success: true });
+  try {
+    db.prepare('UPDATE completed_workouts SET workout_template_id = NULL WHERE workout_template_id = ?').run(req.params.id);
+    const result = db.prepare('DELETE FROM workout_templates WHERE id=?').run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Delete template error:', e);
+    res.status(500).json({ error: 'Delete failed', message: e.message });
+  }
 });
 
 router.get('/completed', (req, res) => {
@@ -81,18 +87,23 @@ router.get('/completed/:id', (req, res) => {
 });
 
 router.post('/completed', (req, res) => {
-  const { workout_template_id, workout_snapshot, notes, exercises_completed } = req.body;
-  const stmt = db.prepare(`
-    INSERT INTO completed_workouts (workout_template_id, workout_snapshot, notes, exercises_completed)
-    VALUES (?, ?, ?, ?)
-  `);
-  const result = stmt.run(
-    workout_template_id ?? null,
-    JSON.stringify(workout_snapshot || {}),
-    notes ?? '',
-    JSON.stringify(exercises_completed || [])
-  );
-  res.json({ id: result.lastInsertRowid, success: true });
+  try {
+    const { workout_template_id, workout_snapshot, notes, exercises_completed } = req.body;
+    const stmt = db.prepare(`
+      INSERT INTO completed_workouts (workout_template_id, workout_snapshot, notes, exercises_completed)
+      VALUES (?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      workout_template_id ?? null,
+      JSON.stringify(workout_snapshot || {}),
+      notes ?? '',
+      JSON.stringify(exercises_completed || [])
+    );
+    res.json({ id: result.lastInsertRowid, success: true });
+  } catch (e) {
+    console.error('Mark complete error:', e);
+    res.status(500).json({ error: 'Failed to save completed workout', message: e.message });
+  }
 });
 
 function getDefaultPreferences() {

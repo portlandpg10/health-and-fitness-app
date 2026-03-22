@@ -157,7 +157,11 @@ export default function WorkoutCreator() {
         exercises_completed: [],
       }),
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || `Failed to mark complete (${res.status})`);
+      return;
+    }
     await deleteDay(t, dayIndex);
   };
 
