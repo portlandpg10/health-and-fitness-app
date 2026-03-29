@@ -19,8 +19,8 @@ export async function generateWorkouts(numWorkouts, weekStartDate) {
 
   const historyRows = db.prepare(`
     SELECT workout_snapshot, completed_at FROM completed_workouts
-    WHERE completed_at >= datetime('now', '-28 days')
     ORDER BY completed_at DESC
+    LIMIT 6
   `).all();
 
   const historySummary = historyRows.map(r => {
@@ -36,7 +36,8 @@ export async function generateWorkouts(numWorkouts, weekStartDate) {
 ## User instructions (follow these carefully):
 ${instructions || '(No specific instructions provided. Use general fitness best practices.)'}
 
-## Recent workout history (use this to avoid repetition):
+## Recent workout history (last ~6 sessions — ensure variety):
+Avoid repeating the same movements, workout types, or structures from the sessions below. Prioritise exercises and formats not seen recently.
 ${historySummary || 'No recent history'}
 
 ## Output format
