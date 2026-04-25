@@ -270,11 +270,25 @@ export default function WeightTracker() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis yAxisId="left" />
-                    <YAxis yAxisId="right" orientation="right" />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[170, 190]}
+                      allowDataOverflow
+                    />
                     <Tooltip />
                     <Legend />
                     <Line yAxisId="left" type="monotone" dataKey="net_burn" stroke="#3b82f6" name="Net Burn" dot={false} />
-                    <Line yAxisId="right" type="monotone" dataKey="weight" stroke="#10b981" name="Weight (lbs)" dot={false} />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="weight"
+                      name="Weight (lbs)"
+                      stroke="#10b981"
+                      strokeWidth={0}
+                      dot={{ r: 4, fill: '#10b981' }}
+                      activeDot={{ r: 6 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
