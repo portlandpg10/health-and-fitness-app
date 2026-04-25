@@ -34,9 +34,40 @@ export default function WeightTracker() {
     rightThigh: '',
   });
 
+  const formDefaultsForDate = (date) => ({
+    date,
+    steps: 10,
+    bad_calories: 0,
+    weight: '',
+    waist: '',
+    leftThigh: '',
+    rightThigh: '',
+  });
+
+  const formFromEntry = (date, entry) => {
+    if (!entry) return formDefaultsForDate(date);
+    const stepsK = Math.round((entry.steps ?? 0) / 1000);
+    const badUnits = Math.round((entry.bad_calories ?? 0) / 100);
+    return {
+      date,
+      steps: Math.min(50, Math.max(0, stepsK)),
+      bad_calories: Math.min(20, Math.max(0, badUnits)),
+      weight: entry.weight != null && entry.weight !== '' ? String(entry.weight) : '',
+      // DB stores a single sum; only waist is filled so re-save keeps the same total
+      waist: entry.measurements != null ? String(entry.measurements) : '',
+      leftThigh: '',
+      rightThigh: '',
+    };
+  };
+
   useEffect(() => {
     fetch(`${API}/weight`).then(r => r.json()).then(setEntries).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const entry = entries.find((x) => x.date === form.date);
+    setForm(formFromEntry(form.date, entry));
+  }, [form.date, entries]);
 
   useEffect(() => {
     fetch(`${API}/weight/model`).then(r => r.json()).then(data => {
@@ -66,7 +97,6 @@ export default function WeightTracker() {
     });
     const updated = await fetch(`${API}/weight`).then(r => r.json());
     setEntries(updated);
-    setForm(f => ({ ...f, weight: '', waist: '', leftThigh: '', rightThigh: '' }));
   };
 
   const stepsOptions = Array.from({ length: 51 }, (_, i) => i);
