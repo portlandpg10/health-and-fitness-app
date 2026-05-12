@@ -97,8 +97,9 @@ export default function WorkoutCreator() {
     if (editingDay?.templateId === id) setEditingDay(null);
   };
 
-  const deleteDay = async (t, dayIndex) => {
-    const newWorkouts = t.workouts.filter((_, i) => i !== dayIndex);
+  const deleteDay = async (t, dayIndex, workoutsOverride) => {
+    const sourceWorkouts = workoutsOverride || t.workouts;
+    const newWorkouts = sourceWorkouts.filter((_, i) => i !== dayIndex);
     if (newWorkouts.length === 0) {
       await deleteTemplate(t.id);
       return;
@@ -127,6 +128,9 @@ export default function WorkoutCreator() {
       body: JSON.stringify({ workouts: editingDay.workouts }),
     });
     if (!res.ok) { alert('Failed to save'); return; }
+    setTemplates(ts => ts.map(t => (
+      t.id === editingDay.templateId ? { ...t, workouts: editingDay.workouts } : t
+    )));
     fetchTemplates();
     setEditingDay(null);
   };
@@ -146,7 +150,8 @@ export default function WorkoutCreator() {
   };
 
   const markComplete = async (t, dayIndex) => {
-    const day = t.workouts?.[dayIndex];
+    const sourceWorkouts = editingDay?.templateId === t.id ? editingDay.workouts : t.workouts;
+    const day = sourceWorkouts?.[dayIndex];
     const res = await fetch(`${API}/workouts/completed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -162,7 +167,7 @@ export default function WorkoutCreator() {
       alert(err.error || `Failed to mark complete (${res.status})`);
       return;
     }
-    await deleteDay(t, dayIndex);
+    await deleteDay(t, dayIndex, sourceWorkouts);
   };
 
   return (

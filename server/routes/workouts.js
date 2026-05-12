@@ -68,12 +68,17 @@ router.delete('/templates/:id', (req, res) => {
 });
 
 router.get('/completed', (req, res) => {
-  const rows = db.prepare('SELECT * FROM completed_workouts ORDER BY completed_at DESC').all();
-  res.json(rows.map(r => ({
+  const rows = db.prepare('SELECT * FROM completed_workouts').all();
+  const completed = rows.map(r => ({
     ...r,
     workout_snapshot: r.workout_snapshot ? JSON.parse(r.workout_snapshot) : null,
     exercises_completed: r.exercises_completed ? JSON.parse(r.exercises_completed) : null,
-  })));
+  })).sort((a, b) => {
+    const aDate = a.workout_snapshot?.workouts?.[0]?.date || a.completed_at || '';
+    const bDate = b.workout_snapshot?.workouts?.[0]?.date || b.completed_at || '';
+    return bDate.localeCompare(aDate);
+  });
+  res.json(completed);
 });
 
 router.get('/completed/:id', (req, res) => {

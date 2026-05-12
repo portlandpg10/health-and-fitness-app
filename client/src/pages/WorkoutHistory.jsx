@@ -3,11 +3,27 @@ import { Link } from 'react-router-dom';
 
 const API = '/api';
 
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const dayFromDate = (dateStr) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return DAY_NAMES[new Date(y, m - 1, d).getDay()];
+};
+
 export default function WorkoutHistory() {
   const [completed, setCompleted] = useState([]);
 
   useEffect(() => {
-    fetch(`${API}/workouts/completed`).then(r => r.json()).then(setCompleted);
+    fetch(`${API}/workouts/completed`)
+      .then(r => r.json())
+      .then(data => {
+        const sorted = [...data].sort((a, b) => {
+          const aDate = a.workout_snapshot?.workouts?.[0]?.date || a.completed_at || '';
+          const bDate = b.workout_snapshot?.workouts?.[0]?.date || b.completed_at || '';
+          return bDate.localeCompare(aDate);
+        });
+        setCompleted(sorted);
+      });
   }, []);
 
   const formatDate = (d) => new Date(d.replace(' ', 'T') + 'Z').toLocaleDateString();
@@ -25,7 +41,9 @@ export default function WorkoutHistory() {
             return (
               <li key={c.id} className="p-4 hover:bg-slate-50">
                 <Link to={`/history/${c.id}`} className="block">
-                  <div className="font-medium">{formatDate(c.completed_at)}</div>
+                  <div className="font-medium">
+                    {first?.date ? `${dayFromDate(first.date)} — ${first.date}` : formatDate(c.completed_at)}
+                  </div>
                   <div className="text-sm text-slate-600 truncate">{summary}</div>
                 </Link>
               </li>

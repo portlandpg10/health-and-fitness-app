@@ -19,14 +19,19 @@ export async function generateWorkouts(numWorkouts, weekStartDate) {
 
   const historyRows = db.prepare(`
     SELECT workout_snapshot, completed_at FROM completed_workouts
-    ORDER BY completed_at DESC
-    LIMIT 6
-  `).all();
+  `).all()
+    .map(r => ({ ...r, workout_snapshot: JSON.parse(r.workout_snapshot || '{}') }))
+    .sort((a, b) => {
+      const aDate = a.workout_snapshot?.workouts?.[0]?.date || a.completed_at || '';
+      const bDate = b.workout_snapshot?.workouts?.[0]?.date || b.completed_at || '';
+      return bDate.localeCompare(aDate);
+    })
+    .slice(0, 12);
 
   const historySummary = historyRows.map(r => {
-    const snap = JSON.parse(r.workout_snapshot || '{}');
+    const snap = r.workout_snapshot || {};
     const days = snap.workouts || [];
-    return days.map(d => `${d.date || ''}: ${d.text ? d.text.slice(0, 120) : ''}`).join('\n');
+    return days.map(d => `${d.date || ''}: ${d.text || ''}`).join('\n');
   }).filter(Boolean).join('\n---\n');
 
   const days = getDates(weekStartDate, numWorkouts);
@@ -36,7 +41,7 @@ export async function generateWorkouts(numWorkouts, weekStartDate) {
 ## User instructions (follow these carefully):
 ${instructions || '(No specific instructions provided. Use general fitness best practices.)'}
 
-## Recent workout history (last ~6 sessions — ensure variety):
+## Recent workout history (last ~12 sessions — ensure variety):
 Avoid repeating the same movements, workout types, or structures from the sessions below. Prioritise exercises and formats not seen recently.
 ${historySummary || 'No recent history'}
 
@@ -63,6 +68,8 @@ CRITICAL formatting rules — follow these exactly or the display will break:
 5. For lifting days: ramp-up sets (e.g. "Empty Bar x 10, 50% x 5") belong under the lift name in the main section. Do NOT create a separate "Warm-Up" label for each lift.
 
 6. There must be exactly ONE "Warm-Up" line in the entire text. Do not use the word "Warm-Up" anywhere else.
+
+7. Do NOT include a cooldown, stretching finisher, recovery block, or any "Cooldown" section. The workout must end after the main WOD/lifting work.
 
 Example — conditioning day:
 Warm-Up (8 min)
@@ -97,10 +104,6 @@ Empty Bar x 10, 50% x 5, 65% x 3
 Deadlift
 50% x 5, 65% x 3, 80% x 2
 5 x 3 — build to a heavy triple, reset each rep
-
-Cooldown
-2 min easy walk
-10 Cat-Cow, 30 sec Pigeon each side
 
 Return ONLY the JSON array. No markdown, no explanation.`;
 
