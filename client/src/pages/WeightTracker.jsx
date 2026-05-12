@@ -11,6 +11,55 @@ import {
 } from 'recharts';
 const API = '/api';
 
+function csvCell(value) {
+  if (value == null || value === '') return '';
+  const s = String(value);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadBodyTrackerCsv(rows) {
+  const header = [
+    'id',
+    'date',
+    'steps',
+    'bad_calories',
+    'weight',
+    'measurements',
+    'created_at',
+    'steps_1k',
+    'bad_calories_100',
+    'net_burn',
+  ];
+  const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+  const lines = [
+    header.join(','),
+    ...sorted.map((e) =>
+      [
+        csvCell(e.id),
+        csvCell(e.date),
+        csvCell(e.steps ?? 0),
+        csvCell(e.bad_calories ?? 0),
+        csvCell(e.weight ?? ''),
+        csvCell(e.measurements ?? ''),
+        csvCell(e.created_at ?? ''),
+        csvCell((e.steps ?? 0) / 1000),
+        csvCell((e.bad_calories ?? 0) / 100),
+        csvCell((e.steps ?? 0) / 1000 - (e.bad_calories ?? 0) / 100),
+      ].join(',')
+    ),
+  ];
+  const csv = lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `body-tracker-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.rel = 'noopener';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function WeightTracker() {
   const [entries, setEntries] = useState([]);
   const [model, setModel] = useState(null);
@@ -205,7 +254,17 @@ export default function WeightTracker() {
       {/* Mobile: last 3 entries for confirmation */}
       {entries.length > 0 && (
         <div className="md:hidden bg-white rounded-xl shadow overflow-hidden">
-          <h2 className="font-semibold text-slate-700 p-4 border-b border-slate-100">Recent entries</h2>
+          <div className="flex flex-row items-center justify-between gap-3 p-4 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-700">Recent entries</h2>
+            <button
+              type="button"
+              disabled={loading || entries.length === 0}
+              onClick={() => downloadBodyTrackerCsv(entries)}
+              className="shrink-0 px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Export CSV
+            </button>
+          </div>
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
@@ -234,7 +293,17 @@ export default function WeightTracker() {
       {/* Desktop: Table and Graphs */}
       <div className="hidden md:block space-y-6">
           <div className="bg-white rounded-xl shadow overflow-hidden">
-            <h2 className="font-semibold text-slate-700 p-4">History</h2>
+            <div className="flex flex-row items-center justify-between gap-3 p-4 border-b border-slate-100">
+              <h2 className="font-semibold text-slate-700">History</h2>
+              <button
+                type="button"
+                disabled={loading || entries.length === 0}
+                onClick={() => downloadBodyTrackerCsv(entries)}
+                className="shrink-0 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                Export CSV
+              </button>
+            </div>
             <div className="overflow-x-auto max-h-80 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-100 sticky top-0">
