@@ -20,8 +20,7 @@ export default function WorkoutDisplay({ tv }) {
   const [dayIndex, setDayIndex] = useState(Number(searchParams.get('day') ?? 0));
   const [completed, setCompleted] = useState(false);
   const [fontSize, setFontSize] = useState(24);
-  const leftPanelRef = useRef(null);
-  const rightPanelRef = useRef(null);
+  const panelRefs = useRef([]);
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   // Reset font size whenever the displayed day changes
@@ -30,7 +29,7 @@ export default function WorkoutDisplay({ tv }) {
   // Shrink font one pixel at a time until neither panel overflows its container
   useEffect(() => {
     if (!tv) return;
-    const panels = [leftPanelRef.current, rightPanelRef.current].filter(Boolean);
+    const panels = panelRefs.current.filter(Boolean);
     const overflowing = panels.some(el => el.scrollHeight > el.clientHeight + 2);
     if (overflowing && fontSize > 11) setFontSize(f => f - 1);
   });
@@ -92,55 +91,63 @@ export default function WorkoutDisplay({ tv }) {
     return '';
   };
 
-  const warmupPattern = /^Warm-?Up/i;
-  const wodPattern = /^WOD\b|(💥\s*)?(Workout|Strength|Conditioning|MetCon|AMRAP|EMOM|For Time|Circuit)/i;
+  // Strict, anchored headers so body lines (e.g. "EMOM 18", "Strength work")
+  // are never mistaken for a new section header.
+  const warmupPattern = /^Warm-?Up\b/i;
+  const liftsPattern = /^LIFTS\b/i;
+  const wodPattern = /^WOD\b/i;
 
-  const stripLeadingHeader = (text, pattern) => {
-    const lines = text.split('\n');
-    if (pattern.test(lines[0]?.trim())) return lines.slice(1).join('\n').trimStart();
-    return text;
+  const headerTitle = (line) => {
+    const t = line.trim();
+    if (warmupPattern.test(t)) return 'Warm-Up';
+    if (liftsPattern.test(t)) return 'LIFTS';
+    if (wodPattern.test(t)) return 'WOD';
+    return null;
   };
 
-  const splitPanels = (text) => {
-    if (!text) return { left: '', right: '' };
+  // Split the day text into ordered sections by header line. A single day may
+  // contain any combination of Warm-Up / WOD / LIFTS (e.g. a blended day with
+  // all three). The header line itself is dropped — its title labels the panel.
+  const parseSections = (text) => {
+    if (!text) return [];
     const lines = text.split('\n');
-
-    // Primary split: explicit WOD/Strength/etc. header
-    const explicitIdx = lines.findIndex((l, i) => i > 0 && wodPattern.test(l.trim()));
-    if (explicitIdx !== -1) {
-      const leftRaw = lines.slice(0, explicitIdx).join('\n').trim();
-      const rightRaw = lines.slice(explicitIdx).join('\n').trim();
-      return {
-        left: stripLeadingHeader(leftRaw, warmupPattern),
-        right: stripLeadingHeader(rightRaw, wodPattern),
-      };
-    }
-
-    // Fallback: if the text starts with a Warm-Up section, split at the first
-    // blank line that follows it — works for lifting days where Claude doesn't
-    // write an explicit WOD header but does separate warm-up from working sets.
-    const warmupIdx = lines.findIndex(l => warmupPattern.test(l.trim()));
-    if (warmupIdx !== -1) {
-      const blankAfterWarmup = lines.findIndex((l, i) => i > warmupIdx && l.trim() === '');
-      if (blankAfterWarmup !== -1) {
-        const nextContentIdx = lines.findIndex((l, i) => i > blankAfterWarmup && l.trim() !== '');
-        if (nextContentIdx !== -1) {
-          const leftRaw = lines.slice(warmupIdx, blankAfterWarmup).join('\n').trim();
-          const rightRaw = lines.slice(nextContentIdx).join('\n').trim();
-          return {
-            left: stripLeadingHeader(leftRaw, warmupPattern),
-            right: rightRaw,
-          };
-        }
+    const sections = [];
+    let current = null;
+    for (const line of lines) {
+      const title = headerTitle(line);
+      if (title) {
+        current = { title, body: [] };
+        sections.push(current);
+      } else if (current) {
+        current.body.push(line);
+      } else {
+        current = { title: null, body: [line] };
+        sections.push(current);
       }
     }
 
-    // No warm-up found at all — show everything in the right panel
-    return { left: '', right: text };
+    let result = sections
+      .map(s => ({ title: s.title, body: s.body.join('\n').trim() }))
+      .filter(s => s.body || s.title);
+
+    // Legacy fallback: an old workout with only a Warm-Up header but un-headered
+    // working sets after it — split at the first blank-line gap so the working
+    // sets get their own panel instead of living inside the warm-up.
+    if (result.length === 1 && result[0].title === 'Warm-Up') {
+      const gap = result[0].body.indexOf('\n\n');
+      if (gap !== -1) {
+        result = [
+          { title: 'Warm-Up', body: result[0].body.slice(0, gap).trim() },
+          { title: 'WOD', body: result[0].body.slice(gap + 2).trim() },
+        ];
+      }
+    }
+    return result;
   };
 
   if (tv) {
-    const { left, right } = splitPanels(dayText(day));
+    const sections = parseSections(dayText(day));
+    panelRefs.current = [];
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col p-4 overflow-hidden">
 
@@ -187,46 +194,33 @@ export default function WorkoutDisplay({ tv }) {
           </div>
         </div>
 
-        {/* Two-panel layout — min-h-0 is critical to allow flex children to shrink */}
+        {/* One panel per section, in order — min-h-0 lets flex children shrink.
+            WOD is the bulkiest, so it gets double the width of Warm-Up/LIFTS. */}
         <div className="flex flex-1 gap-4 min-h-0">
-          {left ? (
-            <>
-              <div className="w-1/3 bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden">
-                <h2 className="text-lg font-bold text-white mb-3 uppercase tracking-widest flex-shrink-0">
-                  Warm-Up
-                </h2>
-                <pre
-                  ref={leftPanelRef}
-                  className="flex-1 overflow-hidden whitespace-pre-wrap font-sans"
-                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.65 }}
-                >
-                  {left}
-                </pre>
-              </div>
-              <div className="w-2/3 bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden">
-                <h2 className="text-lg font-bold text-white mb-3 uppercase tracking-widest flex-shrink-0">
-                  WOD
-                </h2>
-                <pre
-                  ref={rightPanelRef}
-                  className="flex-1 overflow-hidden whitespace-pre-wrap font-sans"
-                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.65, columnCount: 2, columnGap: '2.5rem' }}
-                >
-                  {right}
-                </pre>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden">
-              <pre
-                ref={rightPanelRef}
-                className="flex-1 overflow-hidden whitespace-pre-wrap font-sans"
-                style={{ fontSize: `${fontSize}px`, lineHeight: 1.65 }}
+          {sections.map((s, i) => {
+            const isMain = s.title === 'WOD' || s.title == null;
+            const columns = isMain && sections.length === 2 ? 2 : 1;
+            return (
+              <div
+                key={i}
+                className="bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden"
+                style={{ flex: isMain ? 2 : 1 }}
               >
-                {right}
-              </pre>
-            </div>
-          )}
+                {s.title && (
+                  <h2 className="text-lg font-bold text-white mb-3 uppercase tracking-widest flex-shrink-0">
+                    {s.title}
+                  </h2>
+                )}
+                <pre
+                  ref={el => { panelRefs.current[i] = el; }}
+                  className="flex-1 overflow-hidden whitespace-pre-wrap font-sans"
+                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.65, columnCount: columns, columnGap: '2.5rem' }}
+                >
+                  {s.body}
+                </pre>
+              </div>
+            );
+          })}
         </div>
       </div>
     );

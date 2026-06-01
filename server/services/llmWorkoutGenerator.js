@@ -55,17 +55,18 @@ CRITICAL formatting rules — follow these exactly or the display will break:
 
 1. Do NOT put the day name, date, or a title (like "Heavy Lifting Day") anywhere in the text. Those are stored separately.
 
-2. The text must have EXACTLY TWO sections: "Warm-Up" and "WOD". No other top-level labels.
+2. The text always starts with a "Warm-Up" section, followed by one or both main sections: a "WOD" section (conditioning) and a "LIFTS" section (lifting). A single day MAY include both a WOD and a LIFTS section. Use only these exact headers: "Warm-Up", "WOD", "LIFTS". No other top-level labels.
 
 3. The first line of the text must be exactly: Warm-Up (X min)
    Under it, write only the GENERAL warm-up movements (cardio, mobility, activation). Do NOT put any lift-specific ramp-up sets here.
 
-4. After the warm-up, leave one blank line, then write the main workout.
-   For conditioning days, start this section with: WOD (or WOD - subtitle)
-   For lifting days, start with the first lift name (e.g. "Back Squat") — no need to write "WOD".
-   Either way, there must be exactly one blank line separating the warm-up from the working sets.
+4. After the warm-up, leave one blank line, then write the main section(s).
+   A conditioning block starts with: WOD (or WOD - subtitle)
+   A lifting block starts with a line that says exactly: LIFTS
+   If the day has both, write the WOD block first, then the LIFTS block.
+   Separate every section (Warm-Up, WOD, LIFTS) from the next with exactly one blank line.
 
-5. For lifting days: ramp-up sets (e.g. "Empty Bar x 10, 50% x 5") belong under the lift name in the main section. Do NOT create a separate "Warm-Up" label for each lift.
+5. In the "LIFTS" section: list ONLY the lift names, one per line. Do NOT include ramp-up/warm-up sets (no "Empty Bar x 10", no "50% x 5", no "65% x 3" lines), and do NOT include working sets, rep schemes, set/rep counts, tempos, or coaching cues (no "5 x 5", no "5 x 4 — build to...", etc.). Each lift is just its name on its own line — nothing else.
 
 6. There must be exactly ONE "Warm-Up" line in the entire text. Do not use the word "Warm-Up" anywhere else.
 
@@ -84,26 +85,6 @@ WOD - Engine Builder
 10 Box Jumps
 8 Pull-Ups
 200m Run
-
-Example — lifting day:
-Warm-Up (10 min)
-400m Easy Run
-10 Banded Good Mornings
-10 Shoulder Pass-Throughs
-10 Hip Circles each direction
-
-WOD - Heavy Day
-Back Squat
-Empty Bar x 10, 50% x 5, 65% x 3, 80% x 2
-5 x 5 — build to a heavy 5-rep set
-
-Strict Shoulder Press
-Empty Bar x 10, 50% x 5, 65% x 3
-5 x 5 — no leg drive, full lockout
-
-Deadlift
-50% x 5, 65% x 3, 80% x 2
-5 x 3 — build to a heavy triple, reset each rep
 
 Return ONLY the JSON array. No markdown, no explanation.`;
 

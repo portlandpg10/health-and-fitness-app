@@ -7,11 +7,31 @@ const VOLUME_PRESETS = ['1x5', '2x5', '3x3', '3x5', '3x8'];
 export default function CurrentLifts() {
   const [lifts, setLifts] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [selected, setSelected] = useState(new Set());
   const [form, setForm] = useState({ name: '', weight: '', volume_type: '5x5' });
 
   useEffect(() => {
     fetch(`${API}/lifts`).then(r => r.json()).then(setLifts);
   }, []);
+
+  const toggleSelected = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = lifts.length > 0 && selected.size === lifts.length;
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(lifts.map(l => l.id)));
+  };
+
+  // When lifts are selected, only those are sent to the TV; otherwise show all.
+  const tvLink = selected.size > 0
+    ? `/lifts/display?ids=${[...selected].join(',')}`
+    : '/lifts/display';
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -48,6 +68,11 @@ export default function CurrentLifts() {
   const handleDelete = async (id) => {
     await fetch(`${API}/lifts/${id}`, { method: 'DELETE' });
     setLifts(lifts.filter(l => l.id !== id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
   const updateLift = (id, field, value) => {
@@ -58,8 +83,8 @@ export default function CurrentLifts() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-800">Current Lifts</h1>
-        <Link to="/lifts/display" className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm">
-          View on TV
+        <Link to={tvLink} className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm">
+          View on TV{selected.size > 0 ? ` (${selected.size})` : ''}
         </Link>
       </div>
 
@@ -99,9 +124,30 @@ export default function CurrentLifts() {
       </form>
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
+        {lifts.length > 0 && (
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="w-4 h-4 accent-slate-700"
+            />
+            <span>
+              {selected.size > 0
+                ? `${selected.size} selected for TV`
+                : 'Select lifts to show on TV (none selected shows all)'}
+            </span>
+          </div>
+        )}
         <ul className="divide-y divide-slate-100">
           {lifts.map(l => (
             <li key={l.id} className="p-4 flex flex-wrap gap-4 items-center">
+              <input
+                type="checkbox"
+                checked={selected.has(l.id)}
+                onChange={() => toggleSelected(l.id)}
+                className="w-4 h-4 accent-slate-700 flex-shrink-0"
+              />
               {editing === l.id ? (
                 <>
                   <input

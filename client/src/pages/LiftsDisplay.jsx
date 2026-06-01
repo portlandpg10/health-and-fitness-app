@@ -1,17 +1,30 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useFullscreen } from '../hooks/useFullscreen';
 
 const API = '/api';
 
+const roundTo = (n, step = 2.5) => Math.round(n / step) * step;
+
 export default function LiftsDisplay({ tv }) {
-  const [lifts, setLifts] = useState([]);
+  const [allLifts, setAllLifts] = useState([]);
+  const [searchParams] = useSearchParams();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   useEffect(() => {
-    fetch(`${API}/lifts`).then(r => r.json()).then(setLifts);
+    fetch(`${API}/lifts`).then(r => r.json()).then(setAllLifts);
   }, []);
 
   if (!tv) return null;
+
+  // ?ids=1,3,5 limits the display to the selected lifts; absent shows all.
+  const idsParam = searchParams.get('ids');
+  const selectedIds = idsParam
+    ? idsParam.split(',').map(Number).filter(n => !Number.isNaN(n))
+    : null;
+  const lifts = selectedIds
+    ? allLifts.filter(l => selectedIds.includes(l.id))
+    : allLifts;
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-8 relative">
@@ -22,18 +35,24 @@ export default function LiftsDisplay({ tv }) {
       >
         {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       </button>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <h1 className="text-4xl md:text-6xl font-bold mb-12">Current Lifts</h1>
-        <ul className="space-y-6">
-          {lifts.map(l => (
-            <li key={l.id} className="text-2xl md:text-4xl flex justify-between items-center">
-              <span className="font-semibold">{l.name}</span>
-              <span className="text-slate-300">
-                {l.weight} lbs @ {l.volume_type}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {lifts.length > 0 && (
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-10 md:gap-x-16 items-baseline">
+            <div className="text-sm md:text-lg uppercase tracking-widest text-slate-500 pb-4">Lift</div>
+            <div className="text-sm md:text-lg uppercase tracking-widest text-slate-500 pb-4 text-right">Working</div>
+            <div className="text-sm md:text-lg uppercase tracking-widest text-slate-500 pb-4 text-right">50%</div>
+            <div className="text-sm md:text-lg uppercase tracking-widest text-slate-500 pb-4 text-right">80%</div>
+            {lifts.map(l => (
+              <div key={l.id} className="contents">
+                <div className="text-2xl md:text-4xl font-semibold py-4 border-t border-slate-800">{l.name}</div>
+                <div className="text-2xl md:text-4xl font-bold text-white text-right tabular-nums py-4 border-t border-slate-800">{l.weight}</div>
+                <div className="text-2xl md:text-4xl text-slate-400 text-right tabular-nums py-4 border-t border-slate-800">{roundTo(l.weight * 0.5)}</div>
+                <div className="text-2xl md:text-4xl text-slate-400 text-right tabular-nums py-4 border-t border-slate-800">{roundTo(l.weight * 0.8)}</div>
+              </div>
+            ))}
+          </div>
+        )}
         {lifts.length === 0 && (
           <p className="text-slate-400 text-xl">No lifts added yet.</p>
         )}
