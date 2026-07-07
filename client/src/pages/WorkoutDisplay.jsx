@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useFullscreen } from '../hooks/useFullscreen';
 import WorkoutTimer from '../components/WorkoutTimer';
+import { parseWodBody } from '../utils/wodBodyParser';
 
 const API = '/api';
 
@@ -13,6 +14,11 @@ const dayFromDate = (dateStr) => {
   return DAY_NAMES[new Date(y, m - 1, d).getDay()];
 };
 
+const BASE_FONT_SIZE = 24;
+const WOD_MODE_FONT_SIZE = Math.round(BASE_FONT_SIZE * 1.25);
+const WOD_MODE_TIMER_WIDTH = 'calc(18rem * 0.85)'; // 15% narrower than w-72
+const MOVEMENT_TWO_COLUMN_MIN = 7; // 1 column for typical WODs (≤6 movements)
+
 export default function WorkoutDisplay({ tv }) {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -20,13 +26,22 @@ export default function WorkoutDisplay({ tv }) {
   const [workout, setWorkout] = useState(null);
   const [dayIndex, setDayIndex] = useState(Number(searchParams.get('day') ?? 0));
   const [completed, setCompleted] = useState(false);
-  const [fontSize, setFontSize] = useState(24);
-  const [timerCollapsed, setTimerCollapsed] = useState(false);
+  const [fontSize, setFontSize] = useState(BASE_FONT_SIZE);
+  const [wodActive, setWodActive] = useState(false);
   const panelRefs = useRef([]);
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
-  // Reset font size whenever the displayed day changes
-  useEffect(() => { setFontSize(24); }, [dayIndex]);
+  // Reset font size and view whenever the displayed day changes
+  useEffect(() => {
+    setFontSize(BASE_FONT_SIZE);
+    setWodActive(false);
+  }, [dayIndex]);
+
+  // Larger starting font in WOD-only mode where more horizontal space is available
+  useEffect(() => {
+    if (!tv) return;
+    setFontSize(wodActive ? WOD_MODE_FONT_SIZE : BASE_FONT_SIZE);
+  }, [wodActive, tv]);
 
   // Shrink font one pixel at a time until neither panel overflows its container
   useEffect(() => {
@@ -152,10 +167,107 @@ export default function WorkoutDisplay({ tv }) {
     const wodSection = sections.find(s => s.title === 'WOD') ?? sections.find(s => s.title == null);
     const wodText = wodSection?.body ?? '';
     panelRefs.current = [];
+
+    const renderPanel = (s, key, { flex = 1, columns = 1 } = {}) => (
+      <div
+        key={key}
+        className="bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden min-h-0"
+        style={{ flex }}
+      >
+        {s.title && (
+          <h2 className="text-lg font-bold text-white mb-3 uppercase tracking-widest flex-shrink-0">
+            {s.title}
+          </h2>
+        )}
+        <pre
+          ref={el => { panelRefs.current.push(el); }}
+          className="flex-1 overflow-hidden whitespace-pre-wrap font-sans"
+          style={{ fontSize: `${fontSize}px`, lineHeight: 1.65, columnCount: columns, columnGap: '2.5rem' }}
+        >
+          {s.body}
+        </pre>
+      </div>
+    );
+
+    const renderWodPanel = (body, key, { flex = 2, formatInTitle = false } = {}) => {
+      const parsed = parseWodBody(body);
+      const title = 'WOD';
+
+      if (!parsed.structured) {
+        return renderPanel({ title, body: parsed.raw || body }, key, { flex, columns: 1 });
+      }
+
+      const movementColumns = parsed.movements.length >= MOVEMENT_TWO_COLUMN_MIN ? 2 : 1;
+
+      const formatSize = Math.max(11, Math.round(fontSize * 0.88));
+      const noteSize = Math.max(11, Math.round(fontSize * 0.82));
+      const inlineFormat = parsed.format.replace(/\s*\n+\s*/g, ' · ').trim();
+
+      return (
+        <div
+          key={key}
+          className="bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden min-h-0"
+          style={{ flex }}
+        >
+          <h2 className="text-lg font-bold text-white mb-3 tracking-widest flex-shrink-0 leading-snug">
+            <span className="uppercase">{title}</span>
+            {formatInTitle && inlineFormat && (
+              <span className="normal-case tracking-normal text-slate-300 font-semibold">
+                {' '}- {inlineFormat}
+              </span>
+            )}
+          </h2>
+          <div
+            ref={el => { panelRefs.current.push(el); }}
+            className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3"
+          >
+            {!formatInTitle && parsed.format && (
+              <pre
+                className="whitespace-pre-wrap font-sans text-slate-400 flex-shrink-0"
+                style={{ fontSize: `${formatSize}px`, lineHeight: 1.55 }}
+              >
+                {parsed.format}
+              </pre>
+            )}
+            <div
+              className={`grid gap-x-8 gap-y-2 content-start ${
+                movementColumns === 2 ? 'grid-cols-2' : 'grid-cols-1'
+              }`}
+            >
+              {parsed.movements.map((movement, i) => (
+                <div
+                  key={i}
+                  className="font-semibold text-white whitespace-pre-wrap font-sans min-w-0"
+                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.65 }}
+                >
+                  {movement}
+                </div>
+              ))}
+            </div>
+            {parsed.notes && (
+              <p
+                className="flex-shrink-0 text-slate-500 font-sans border-t border-slate-700/60 pt-2"
+                style={{ fontSize: `${noteSize}px`, lineHeight: 1.55 }}
+              >
+                {parsed.notes}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const renderSection = (s, key, { flex = 1, columns = 1, formatInTitle = false } = {}) => {
+      if (s.title === 'WOD' || (s.title == null && wodActive)) {
+        return renderWodPanel(s.body, key, { flex, formatInTitle });
+      }
+      return renderPanel(s, key, { flex, columns });
+    };
+
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col p-4 overflow-hidden">
 
-        {/* Compact top bar: back arrow, title, day nav, and fullscreen */}
+        {/* Compact top bar: back arrow, title, WOD mode toggle, and fullscreen */}
         <div className="flex items-center justify-between mb-3 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button
@@ -167,33 +279,15 @@ export default function WorkoutDisplay({ tv }) {
             <h1 className="text-2xl font-bold">{dayFromDate(day?.date)} — {day?.date}</h1>
           </div>
           <div className="flex items-center gap-2">
-            {days.length > 1 && (
-              <>
-                <button
-                  onClick={() => setDayIndex(Math.max(0, dayIndex - 1))}
-                  disabled={dayIndex === 0}
-                  className="px-4 py-2 bg-slate-700 rounded-lg text-base disabled:opacity-30"
-                >
-                  ← Prev
-                </button>
-                <span className="px-3 py-2 text-slate-400 text-base self-center">
-                  {dayIndex + 1} / {days.length}
-                </span>
-                <button
-                  onClick={() => setDayIndex(Math.min(days.length - 1, dayIndex + 1))}
-                  disabled={dayIndex === days.length - 1}
-                  className="px-4 py-2 bg-slate-700 rounded-lg text-base disabled:opacity-30"
-                >
-                  Next →
-                </button>
-              </>
-            )}
             <button
-              onClick={() => setTimerCollapsed(c => !c)}
-              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-base text-slate-300 transition-colors"
-              title={timerCollapsed ? 'Show timer' : 'Hide timer'}
+              onClick={() => setWodActive(a => !a)}
+              className={`px-3 py-2 rounded-lg text-base transition-colors ${
+                wodActive
+                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white font-medium'
+              }`}
             >
-              {timerCollapsed ? 'Show timer' : 'Hide timer'}
+              {wodActive ? 'End WOD' : 'Start WOD'}
             </button>
             <button
               onClick={toggleFullscreen}
@@ -205,36 +299,31 @@ export default function WorkoutDisplay({ tv }) {
           </div>
         </div>
 
-        <WorkoutTimer key={dayIndex} wodText={wodText} collapsed={timerCollapsed} />
-
-        {/* One panel per section, in order — min-h-0 lets flex children shrink.
-            WOD is the bulkiest, so it gets double the width of Warm-Up/LIFTS. */}
-        <div className="flex flex-1 gap-4 min-h-0">
-          {sections.map((s, i) => {
-            const isMain = s.title === 'WOD' || s.title == null;
-            const columns = isMain && sections.length === 2 ? 2 : 1;
-            return (
-              <div
-                key={i}
-                className="bg-slate-800 rounded-xl p-5 flex flex-col overflow-hidden"
-                style={{ flex: isMain ? 2 : 1 }}
-              >
-                {s.title && (
-                  <h2 className="text-lg font-bold text-white mb-3 uppercase tracking-widest flex-shrink-0">
-                    {s.title}
-                  </h2>
-                )}
-                <pre
-                  ref={el => { panelRefs.current[i] = el; }}
-                  className="flex-1 overflow-hidden whitespace-pre-wrap font-sans"
-                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.65, columnCount: columns, columnGap: '2.5rem' }}
-                >
-                  {s.body}
-                </pre>
-              </div>
-            );
-          })}
-        </div>
+        {wodActive ? (
+          <div className="flex flex-1 gap-4 min-h-0">
+            {renderWodPanel(wodText || 'No WOD section found.', 'wod', {
+              flex: 2,
+              formatInTitle: true,
+            })}
+            <div
+              className="flex-shrink-0 min-h-0 flex flex-col"
+              style={{ width: WOD_MODE_TIMER_WIDTH }}
+            >
+              <WorkoutTimer key={dayIndex} wodText={wodText} layout="vertical" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 gap-4 min-h-0">
+            {sections.map((s, i) => {
+              const isMain = s.title === 'WOD' || s.title == null;
+              const columns = isMain && sections.length === 2 && s.title !== 'WOD' ? 2 : 1;
+              return renderSection(s, i, {
+                flex: isMain ? 2 : 1,
+                columns,
+              });
+            })}
+          </div>
+        )}
       </div>
     );
   }

@@ -68,11 +68,17 @@ CRITICAL formatting rules — follow these exactly or the display will break:
 
 5. In the "LIFTS" section: list ONLY the lift names, one per line. Do NOT include ramp-up/warm-up sets (no "Empty Bar x 10", no "50% x 5", no "65% x 3" lines), and do NOT include working sets, rep schemes, set/rep counts, tempos, or coaching cues (no "5 x 5", no "5 x 4 — build to...", etc.). Each lift is just its name on its own line — nothing else.
 
-6. There must be exactly ONE "Warm-Up" line in the entire text. Do not use the word "Warm-Up" anywhere else.
+6. Inside every "WOD" section, use exactly these sub-headers (each on its own line): FORMAT, MOVEMENTS, and optionally NOTES. No other sub-headers inside WOD.
+   - Under FORMAT: the workout type and structure (e.g. "15-Minute AMRAP", "18-Minute EMOM (6 Rounds of 3-Movement Cycle)", "4 Rounds — 4 Minutes On, 90 Seconds Rest"). Context lines like "In each 4-minute window:" also go here.
+   - Under MOVEMENTS: one exercise or minute assignment per line only. No scoring, coaching, or notes here.
+   - Under NOTES (optional): scoring, pacing, rest, and coaching cues (e.g. "Score is total calories", "Aim to complete each minute in 40-45 seconds").
+   Leave one blank line between FORMAT / MOVEMENTS / NOTES blocks.
 
-7. Do NOT include a cooldown, stretching finisher, recovery block, or any "Cooldown" section. The workout must end after the main WOD/lifting work.
+7. There must be exactly ONE "Warm-Up" line in the entire text. Do not use the word "Warm-Up" anywhere else.
 
-Example — conditioning day:
+8. Do NOT include a cooldown, stretching finisher, recovery block, or any "Cooldown" section. The workout must end after the main WOD/lifting work.
+
+Example — AMRAP day:
 Warm-Up (8 min)
 2 Rounds
 200m Easy Run
@@ -80,11 +86,33 @@ Warm-Up (8 min)
 10 Push-Ups
 
 WOD - Engine Builder
+FORMAT
 15-Minute AMRAP
+
+MOVEMENTS
 12 Kettlebell Swings (55 lb)
 10 Box Jumps
 8 Pull-Ups
 200m Run
+
+Example — EMOM day:
+Warm-Up (8 min)
+400m Easy Run
+10 PVC Pass-Throughs
+10 Air Squats
+
+WOD
+FORMAT
+18-Minute EMOM (6 Rounds of 3-Movement Cycle)
+
+MOVEMENTS
+Minute 1: 12 Kettlebell Swings (55 lb)
+Minute 2: 10 Dips (on dip bar, add weight if able)
+Minute 3: 8 Power Cleans (135/95 lb)
+
+NOTES
+Repeat for 6 total rounds
+Aim to complete each minute's work in 40-45 seconds. Rest is the remaining time in each minute.
 
 Return ONLY the JSON array. No markdown, no explanation.`;
 
