@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useFullscreen } from '../hooks/useFullscreen';
+import WorkoutTimer from '../components/WorkoutTimer';
 
 const API = '/api';
 
@@ -20,6 +21,7 @@ export default function WorkoutDisplay({ tv }) {
   const [dayIndex, setDayIndex] = useState(Number(searchParams.get('day') ?? 0));
   const [completed, setCompleted] = useState(false);
   const [fontSize, setFontSize] = useState(24);
+  const [timerCollapsed, setTimerCollapsed] = useState(false);
   const panelRefs = useRef([]);
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
@@ -147,6 +149,8 @@ export default function WorkoutDisplay({ tv }) {
 
   if (tv) {
     const sections = parseSections(dayText(day));
+    const wodSection = sections.find(s => s.title === 'WOD') ?? sections.find(s => s.title == null);
+    const wodText = wodSection?.body ?? '';
     panelRefs.current = [];
     return (
       <div className="h-screen bg-slate-900 text-white flex flex-col p-4 overflow-hidden">
@@ -185,6 +189,13 @@ export default function WorkoutDisplay({ tv }) {
               </>
             )}
             <button
+              onClick={() => setTimerCollapsed(c => !c)}
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-base text-slate-300 transition-colors"
+              title={timerCollapsed ? 'Show timer' : 'Hide timer'}
+            >
+              {timerCollapsed ? 'Show timer' : 'Hide timer'}
+            </button>
+            <button
               onClick={toggleFullscreen}
               className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-base text-slate-300 transition-colors"
               title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen'}
@@ -193,6 +204,8 @@ export default function WorkoutDisplay({ tv }) {
             </button>
           </div>
         </div>
+
+        <WorkoutTimer key={dayIndex} wodText={wodText} collapsed={timerCollapsed} />
 
         {/* One panel per section, in order — min-h-0 lets flex children shrink.
             WOD is the bulkiest, so it gets double the width of Warm-Up/LIFTS. */}
