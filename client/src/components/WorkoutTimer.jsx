@@ -166,8 +166,9 @@ export default function WorkoutTimer({ wodText, layout = 'vertical' }) {
             ? 'text-green-300'
             : 'text-white';
 
-  const handleStartPause = () => {
+  const handleStartPause = async () => {
     if (timer.state.phase === 'complete') {
+      await sounds.unlock();
       timer.reset();
       timer.start();
       return;
@@ -175,8 +176,10 @@ export default function WorkoutTimer({ wodText, layout = 'vertical' }) {
     if (timer.running) {
       timer.pause();
     } else if (timer.state.phase === 'idle') {
+      await sounds.unlock();
       timer.start();
     } else {
+      await sounds.unlock();
       timer.resume();
     }
   };

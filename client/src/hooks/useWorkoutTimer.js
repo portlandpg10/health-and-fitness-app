@@ -103,7 +103,7 @@ export function useWorkoutTimer(config, sounds) {
   }, [config, reset]);
 
   const start = useCallback(() => {
-    sounds.unlock();
+    void sounds.unlock();
     setRunning(true);
     lastTickRef.current = null;
     lastCountdownBeepRef.current = null;
@@ -124,7 +124,7 @@ export function useWorkoutTimer(config, sounds) {
   }, []);
 
   const resume = useCallback(() => {
-    sounds.unlock();
+    void sounds.unlock();
     setRunning(true);
     lastTickRef.current = null;
   }, [sounds]);
