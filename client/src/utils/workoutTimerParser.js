@@ -1,8 +1,22 @@
-const MINUTE_RE = /(\d+)\s*[-–]?\s*(?:minute|min(?:ute)?s?)\b/i;
+const MINUTE_NUM = String.raw`(\d+(?:\.\d+)?)`;
+const MINUTE_RE = new RegExp(`${MINUTE_NUM}\\s*[-–]?\\s*(?:minute|min(?:ute)?s?)\\b`, 'i');
+
+export function minutesToSeconds(minutes, fallbackSec = 15 * 60) {
+  const n = Number(minutes);
+  if (!Number.isFinite(n) || n <= 0) return fallbackSec;
+  return Math.round(n * 60);
+}
+
+function formatDurationMinLabel(totalSec) {
+  const mins = totalSec / 60;
+  if (Number.isInteger(mins)) return `${mins}-MIN`;
+  const rounded = Math.round(mins * 10) / 10;
+  return `${rounded}-MIN`;
+}
 
 function parseMinutes(text) {
   const m = text.match(MINUTE_RE);
-  return m ? Number(m[1]) * 60 : null;
+  return m ? minutesToSeconds(m[1], 0) || null : null;
 }
 
 function firstMeaningfulLine(text) {
@@ -116,8 +130,10 @@ function matchAmrapRounds(text) {
   }
 
   const roundsMatch = normalized.match(/(\d+)\s*rounds?/i);
-  const amrapMatch = normalized.match(/(\d+)\s*[-–]?\s*(?:minute|min(?:ute)?s?)\s*[-–]?\s*AMRAP/i);
-  const onMatch = normalized.match(/(\d+)\s*min(?:ute)?s?\s*on/i);
+  const amrapMatch = normalized.match(
+    new RegExp(`${MINUTE_NUM}\\s*[-–]?\\s*(?:minute|min(?:ute)?s?)\\s*[-–]?\\s*AMRAP`, 'i')
+  );
+  const onMatch = normalized.match(new RegExp(`${MINUTE_NUM}\\s*min(?:ute)?s?\\s*on`, 'i'));
   const restSec = parseRestSec(normalized);
   if (roundsMatch && restSec != null && Number(roundsMatch[1]) > 1) {
     const workMins = amrapMatch ? Number(amrapMatch[1]) : onMatch ? Number(onMatch[1]) : null;
@@ -127,7 +143,7 @@ function matchAmrapRounds(text) {
         config: {
           type: 'amrapRounds',
           rounds: Number(roundsMatch[1]),
-          workSec: workMins * 60,
+          workSec: minutesToSeconds(workMins),
           restSec,
         },
         confidence: 'medium',
@@ -160,22 +176,22 @@ function matchAmrap(text) {
 
   for (const line of lines) {
     const durationFirst = line.match(
-      /(\d+)\s*[-–]?\s*(?:minute|min(?:ute)?s?)\s*[-–]?\s*AMRAP/i
+      new RegExp(`${MINUTE_NUM}\\s*[-–]?\\s*(?:minute|min(?:ute)?s?)\\s*[-–]?\\s*AMRAP`, 'i')
     );
     if (durationFirst) {
       return {
-        config: { type: 'amrap', durationSec: Number(durationFirst[1]) * 60 },
+        config: { type: 'amrap', durationSec: minutesToSeconds(durationFirst[1]) },
         confidence: 'high',
         matchedLine: line,
       };
     }
 
     const amrapFirst = line.match(
-      /AMRAP\s*[-–:]?\s*(\d+)\s*[-–]?\s*(?:minute|min(?:ute)?s?)/i
+      new RegExp(`AMRAP\\s*[-–:]?\\s*${MINUTE_NUM}\\s*[-–]?\\s*(?:minute|min(?:ute)?s?)`, 'i')
     );
     if (amrapFirst) {
       return {
-        config: { type: 'amrap', durationSec: Number(amrapFirst[1]) * 60 },
+        config: { type: 'amrap', durationSec: minutesToSeconds(amrapFirst[1]) },
         confidence: 'high',
         matchedLine: line,
       };
@@ -372,9 +388,9 @@ export function parseWorkoutTimer(wodText) {
 export function formatTimerLabel(config) {
   switch (config.type) {
     case 'amrap':
-      return `${Math.round(config.durationSec / 60)}-MIN AMRAP`;
+      return `${formatDurationMinLabel(config.durationSec)} AMRAP`;
     case 'amrapRounds':
-      return `${config.rounds}×${Math.round(config.workSec / 60)}-MIN AMRAP / ${config.restSec}s REST`;
+      return `${config.rounds}×${formatDurationMinLabel(config.workSec)} AMRAP / ${config.restSec}s REST`;
     case 'emom': {
       const every = config.intervalSec / 60;
       return every === 1 ? `EMOM ${config.rounds}` : `E${every}MOM ${config.rounds}`;

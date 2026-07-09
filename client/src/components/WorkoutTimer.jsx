@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { parseWorkoutTimer, formatTimerLabel, formatTime } from '../utils/workoutTimerParser';
+import { parseWorkoutTimer, formatTimerLabel, formatTime, minutesToSeconds } from '../utils/workoutTimerParser';
 import { useSound } from '../hooks/useSound';
 import { useWorkoutTimer } from '../hooks/useWorkoutTimer';
 
@@ -14,18 +14,18 @@ const TIMER_TYPES = [
 function buildManualConfig(type, { durationMin, rounds, intervalMin, workSec, restSec, restMin }) {
   switch (type) {
     case 'amrap': {
-      const mins = Math.max(1, Number(durationMin) || 15);
+      const workSec = minutesToSeconds(durationMin);
       const numRounds = Math.max(1, Number(rounds) || 1);
       const restMinutes = Math.max(0, Number(restMin) || 0);
       if (numRounds > 1 || restMinutes > 0) {
         return {
           type: 'amrapRounds',
           rounds: numRounds,
-          workSec: mins * 60,
+          workSec,
           restSec: restMinutes * 60,
         };
       }
-      return { type: 'amrap', durationSec: mins * 60 };
+      return { type: 'amrap', durationSec: workSec };
     }
     case 'countdown':
       return { type: 'countdown', durationSec: Math.max(1, Number(durationMin) || 15) * 60 };
@@ -218,10 +218,11 @@ export default function WorkoutTimer({ wodText, layout = 'vertical' }) {
                 Minutes
                 <input
                   type="number"
-                  min={1}
+                  min={0.5}
+                  step={0.5}
                   value={durationMin}
                   onChange={e => setDurationMin(e.target.value)}
-                  className="w-16 bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-slate-200"
+                  className="w-20 bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-slate-200"
                 />
               </label>
               <label className="flex items-center gap-2 text-slate-400">

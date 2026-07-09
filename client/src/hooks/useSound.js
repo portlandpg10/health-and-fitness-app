@@ -17,6 +17,15 @@ export function useSound() {
   const [muted, setMuted] = useState(false);
   const ctxRef = useRef(null);
   const unlockedRef = useRef(false);
+  const fifteenSecClipRef = useRef(null);
+
+  const getFifteenSecClip = useCallback(() => {
+    if (!fifteenSecClipRef.current) {
+      fifteenSecClipRef.current = new Audio('/sounds/15-seconds-left.wav');
+      fifteenSecClipRef.current.load();
+    }
+    return fifteenSecClipRef.current;
+  }, []);
 
   const unlock = useCallback(async () => {
     if (!ctxRef.current) {
@@ -35,8 +44,10 @@ export function useSound() {
       unlockedRef.current = true;
     }
 
+    getFifteenSecClip();
+
     return ctx.state === 'running';
-  }, []);
+  }, [getFifteenSecClip]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -87,6 +98,18 @@ export function useSound() {
     void playBeep({ frequency: 880, duration: 0.2, count: 3, gap: 0.18 });
   }, [playBeep]);
 
+  const playFifteenSecondsLeft = useCallback(async () => {
+    if (muted) return;
+    await unlock();
+    const audio = getFifteenSecClip();
+    audio.currentTime = 0;
+    try {
+      await audio.play();
+    } catch {
+      // Ignore autoplay blocks; beeps may still work via Web Audio.
+    }
+  }, [muted, unlock, getFifteenSecClip]);
+
   const toggleMute = useCallback(() => {
     setMuted(m => !m);
   }, []);
@@ -101,5 +124,6 @@ export function useSound() {
     playRestStart,
     playRoundEnd,
     playComplete,
+    playFifteenSecondsLeft,
   };
 }

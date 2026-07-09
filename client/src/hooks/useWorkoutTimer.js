@@ -6,6 +6,12 @@ function isWorkRestType(type) {
   return type === 'tabata' || type === 'amrapRounds';
 }
 
+function shouldPlayFifteenSecWarning(cfg, prev) {
+  if (cfg.type === 'forTime') return false;
+  if (isWorkRestType(cfg.type) && prev.subPhase === 'rest') return false;
+  return true;
+}
+
 function initialStateForConfig(config) {
   const base = {
     phase: 'idle',
@@ -88,6 +94,7 @@ export function useWorkoutTimer(config, sounds) {
   const [running, setRunning] = useState(false);
   const lastTickRef = useRef(null);
   const lastCountdownBeepRef = useRef(null);
+  const lastFifteenSecBeepRef = useRef(false);
   const configRef = useRef(config);
   configRef.current = config;
 
@@ -96,6 +103,7 @@ export function useWorkoutTimer(config, sounds) {
     setState(initialStateForConfig(configRef.current));
     lastTickRef.current = null;
     lastCountdownBeepRef.current = null;
+    lastFifteenSecBeepRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -107,6 +115,7 @@ export function useWorkoutTimer(config, sounds) {
     setRunning(true);
     lastTickRef.current = null;
     lastCountdownBeepRef.current = null;
+    lastFifteenSecBeepRef.current = false;
     setState(s => {
       if (s.phase === 'complete') {
         return { ...initialStateForConfig(configRef.current), phase: 'getReady', getReadySec: GET_READY_SEC };
@@ -167,6 +176,7 @@ export function useWorkoutTimer(config, sounds) {
 
     if (didComplete) stopRunning();
     lastCountdownBeepRef.current = null;
+    lastFifteenSecBeepRef.current = false;
   }, [sounds, stopRunning]);
 
   useEffect(() => {
@@ -235,6 +245,14 @@ export function useWorkoutTimer(config, sounds) {
         const nextRemaining = prev.remainingSec - 1;
 
         if (nextRemaining > 0) {
+          if (
+            nextRemaining === 15
+            && shouldPlayFifteenSecWarning(cfg, prev)
+            && !lastFifteenSecBeepRef.current
+          ) {
+            sounds.playFifteenSecondsLeft();
+            lastFifteenSecBeepRef.current = true;
+          }
           if (nextRemaining <= 3 && lastCountdownBeepRef.current !== nextRemaining) {
             sounds.playCountdownTick(nextRemaining);
             lastCountdownBeepRef.current = nextRemaining;
@@ -243,6 +261,7 @@ export function useWorkoutTimer(config, sounds) {
         }
 
         lastCountdownBeepRef.current = null;
+        lastFifteenSecBeepRef.current = false;
 
         if (cfg.type === 'amrap' || cfg.type === 'countdown') {
           sounds.playComplete();
