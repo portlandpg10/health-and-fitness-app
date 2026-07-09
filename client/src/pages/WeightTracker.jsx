@@ -157,6 +157,28 @@ export default function WeightTracker() {
     weight: e.weight,
   }));
 
+  const RECENT_MOBILE_COUNT = 7;
+  const recentMobileEntries = entries.slice(0, RECENT_MOBILE_COUNT);
+
+  const avgOf = (rows, pick) => {
+    const vals = rows.map(pick).filter((v) => v != null && !Number.isNaN(v));
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  };
+
+  const recentMobileAvg = recentMobileEntries.length > 0
+    ? {
+        steps: avgOf(recentMobileEntries, (e) => e.steps / 1000),
+        badCal: avgOf(recentMobileEntries, (e) => e.bad_calories / 100),
+        weight: avgOf(recentMobileEntries, (e) => (
+          e.weight != null && e.weight !== '' ? Number(e.weight) : null
+        )),
+        measurements: avgOf(recentMobileEntries, (e) => (
+          e.measurements != null && e.measurements !== '' ? Number(e.measurements) : null
+        )),
+      }
+    : null;
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-slate-800">Weight Tracker</h1>
@@ -251,7 +273,7 @@ export default function WeightTracker() {
         </button>
       </form>
 
-      {/* Mobile: last 3 entries for confirmation */}
+      {/* Mobile: last 7 entries with averages for confirmation */}
       {entries.length > 0 && (
         <div className="md:hidden bg-white rounded-xl shadow overflow-hidden">
           <div className="flex flex-row items-center justify-between gap-3 p-4 border-b border-slate-100">
@@ -276,8 +298,25 @@ export default function WeightTracker() {
               </tr>
             </thead>
             <tbody>
-              {entries.slice(0, 3).map((e, i) => (
-                <tr key={e.id} className={i > 0 ? 'border-t border-slate-100' : ''}>
+              {recentMobileAvg && (
+                <tr className="bg-slate-50 font-medium">
+                  <td className="px-4 py-3">Average</td>
+                  <td className="px-4 py-3 text-right">
+                    {recentMobileAvg.steps != null ? `${recentMobileAvg.steps.toFixed(1)}k` : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {recentMobileAvg.badCal != null ? recentMobileAvg.badCal.toFixed(1) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {recentMobileAvg.weight != null ? recentMobileAvg.weight.toFixed(1) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {recentMobileAvg.measurements != null ? recentMobileAvg.measurements.toFixed(1) : '—'}
+                  </td>
+                </tr>
+              )}
+              {recentMobileEntries.map((e) => (
+                <tr key={e.id} className="border-t border-slate-100">
                   <td className="px-4 py-3">{e.date}</td>
                   <td className="px-4 py-3 text-right">{(e.steps / 1000).toFixed(0)}k</td>
                   <td className="px-4 py-3 text-right">{e.bad_calories / 100}</td>
