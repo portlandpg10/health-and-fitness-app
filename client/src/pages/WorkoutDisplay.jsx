@@ -198,6 +198,7 @@ export default function WorkoutDisplay({ tv }) {
       }
 
       const movementColumns = parsed.movements.length >= MOVEMENT_TWO_COLUMN_MIN ? 2 : 1;
+      const movementRows = Math.ceil(parsed.movements.length / movementColumns);
 
       const formatSize = Math.max(11, Math.round(fontSize * 0.88));
       const noteSize = Math.max(11, Math.round(fontSize * 0.82));
@@ -233,6 +234,11 @@ export default function WorkoutDisplay({ tv }) {
               className={`grid gap-x-8 gap-y-2 content-start ${
                 movementColumns === 2 ? 'grid-cols-2' : 'grid-cols-1'
               }`}
+              style={
+                movementColumns === 2
+                  ? { gridAutoFlow: 'column', gridTemplateRows: `repeat(${movementRows}, auto)` }
+                  : undefined
+              }
             >
               {parsed.movements.map((movement, i) => (
                 <div
