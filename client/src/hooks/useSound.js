@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+const FIFTEEN_SEC_SOUND_URL = '/sounds/15-seconds-left.wav';
+
 function createAudioContext() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   return Ctx ? new Ctx() : null;
@@ -13,21 +15,60 @@ function playSilentBuffer(ctx) {
   source.start(0);
 }
 
+// HTMLAudioElement defaults to iOS "playback", which pauses Spotify.
+// Web Audio + transient/ambient lets other apps keep playing.
+function configureMixableAudioSession() {
+  const session = navigator.audioSession;
+  if (!session) return;
+  try {
+    session.type = 'transient';
+  } catch {
+    try {
+      session.type = 'ambient';
+    } catch {
+      // Ignore unsupported session types.
+    }
+  }
+}
+
+function decodeAudioData(ctx, arrayBuffer) {
+  if (ctx.decodeAudioData.length === 1) {
+    return ctx.decodeAudioData(arrayBuffer);
+  }
+  return new Promise((resolve, reject) => {
+    ctx.decodeAudioData(arrayBuffer, resolve, reject);
+  });
+}
+
 export function useSound() {
   const [muted, setMuted] = useState(false);
   const ctxRef = useRef(null);
   const unlockedRef = useRef(false);
-  const fifteenSecClipRef = useRef(null);
+  const fifteenSecBufferRef = useRef(null);
+  const fifteenSecLoadRef = useRef(null);
 
-  const getFifteenSecClip = useCallback(() => {
-    if (!fifteenSecClipRef.current) {
-      fifteenSecClipRef.current = new Audio('/sounds/15-seconds-left.wav');
-      fifteenSecClipRef.current.load();
-    }
-    return fifteenSecClipRef.current;
+  const loadFifteenSecBuffer = useCallback(async (ctx) => {
+    if (fifteenSecBufferRef.current) return fifteenSecBufferRef.current;
+    if (fifteenSecLoadRef.current) return fifteenSecLoadRef.current;
+
+    fifteenSecLoadRef.current = (async () => {
+      const res = await fetch(FIFTEEN_SEC_SOUND_URL);
+      if (!res.ok) throw new Error('Failed to load 15-seconds-left sound');
+      const data = await res.arrayBuffer();
+      const buffer = await decodeAudioData(ctx, data);
+      fifteenSecBufferRef.current = buffer;
+      return buffer;
+    })().catch((err) => {
+      fifteenSecLoadRef.current = null;
+      throw err;
+    });
+
+    return fifteenSecLoadRef.current;
   }, []);
 
   const unlock = useCallback(async () => {
+    configureMixableAudioSession();
+
     if (!ctxRef.current) {
       ctxRef.current = createAudioContext();
     }
@@ -44,10 +85,12 @@ export function useSound() {
       unlockedRef.current = true;
     }
 
-    getFifteenSecClip();
+    if (ctx.state === 'running') {
+      void loadFifteenSecBuffer(ctx);
+    }
 
     return ctx.state === 'running';
-  }, [getFifteenSecClip]);
+  }, [loadFifteenSecBuffer]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -100,15 +143,23 @@ export function useSound() {
 
   const playFifteenSecondsLeft = useCallback(async () => {
     if (muted) return;
-    await unlock();
-    const audio = getFifteenSecClip();
-    audio.currentTime = 0;
+    const ready = await unlock();
+    const ctx = ctxRef.current;
+    if (!ready || !ctx || ctx.state !== 'running') return;
+
     try {
-      await audio.play();
+      const buffer = await loadFifteenSecBuffer(ctx);
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = buffer;
+      gain.gain.value = 1;
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
     } catch {
-      // Ignore autoplay blocks; beeps may still work via Web Audio.
+      // Ignore decode/autoplay failures; oscillator beeps still work.
     }
-  }, [muted, unlock, getFifteenSecClip]);
+  }, [muted, unlock, loadFifteenSecBuffer]);
 
   const toggleMute = useCallback(() => {
     setMuted(m => !m);
